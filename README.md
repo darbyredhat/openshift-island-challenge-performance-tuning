@@ -11,12 +11,6 @@ This document provides instructions for setting up and running API-focused load 
 * **Optimizes CTFd Database Resources:** Allocates more CPU and increases Memory limits for the MySQL database pod.
 * **Applies Safe Rollout Strategies:** Configures both deployments to update sequentially, avoiding multi-attach errors with persistent volumes.
 
-Okay, I will remove Node.js & npm, Ansible, and Python from the system requirements section. This leaves only the OpenShift CLI and the Kubernetes Ansible Collection as explicit installation steps.
-
-Here's the updated section:
-
------
-
 #### **Step 1: Install System Requirements (if not already installed)**
 
 Make sure you have the following installed on your macOS or Linux system.
