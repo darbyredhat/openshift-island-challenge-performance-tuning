@@ -48,14 +48,8 @@ Assuming you have:
 Run the following command in your terminal:
 
 ```bash
-ansible-playbook -i inventory.ini tune-openshift-island-challenge.yaml
+ansible-playbook tune-openshift-island-challenge.yaml
 ```
-
-**Explanation:**
-
-* `ansible-playbook`: The command to execute an Ansible playbook.
-* `-i inventory.ini`: Specifies your `inventory.ini` file, which tells Ansible to run the playbook against `localhost` using a local connection.
-* `tune-openshift-island-challenge.yaml`: The name of your Ansible playbook file.
 
 ### **What to Expect:**
 
