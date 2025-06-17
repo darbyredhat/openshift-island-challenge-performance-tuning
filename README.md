@@ -33,3 +33,35 @@ Make sure you have the following installed on your macOS or Linux system.
         oc project <your-ctfd-namespace> # e.g., oc project ctfd
         ```
       * **Verify:** `oc whoami` and `oc project`
+
+Okay, you're ready to run your Ansible playbook to apply the optimizations!
+
+Assuming you have:
+* **Ansible** installed locally.
+* The **`community.kubernetes` collection** installed (`ansible-galaxy collection install community.kubernetes`).
+* The **`oc` CLI** installed and configured to connect to your remote OpenShift cluster, and you are logged into the correct project (`oc project <your-ctfd-namespace>`).
+* Your `tune-openshift-island-challenge.yaml` playbook file and `inventory.ini` file in the same directory.
+* You are currently in that directory in your terminal.
+
+### **How to Run Your Ansible Playbook:**
+
+Run the following command in your terminal:
+
+```bash
+ansible-playbook -i inventory.ini tune-openshift-island-challenge.yaml
+```
+
+**Explanation:**
+
+* `ansible-playbook`: The command to execute an Ansible playbook.
+* `-i inventory.ini`: Specifies your `inventory.ini` file, which tells Ansible to run the playbook against `localhost` using a local connection.
+* `tune-openshift-island-challenge.yaml`: The name of your Ansible playbook file.
+
+### **What to Expect:**
+
+* The playbook will first **scale down** your CTFd application and database deployments to zero replicas. **This will cause downtime for your CTFd application.**
+* It will then apply all the `oc patch` commands we've defined, updating the configurations for both your CTFd app and MySQL database.
+* Finally, it will **scale your database back up**, wait for it to be ready, and then **scale your CTFd application back up**.
+* The entire process will be logged in your terminal, and you'll see messages indicating task progress and rollouts.
+
+After the playbook completes, your CTFd application and database will be running with all the performance and stability optimizations applied. 
