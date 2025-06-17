@@ -65,8 +65,8 @@ After the script completes, your CTFd application and database will be running w
 
 Okay, let's put together a "before and after" table of your API load test results. This will clearly highlight the impact of all the optimizations you've applied.
 
-**Before Optimization:** (New environment, unoptimized, 50 concurrent users)
-**After Optimization:** (New environment, fully optimized, 50 concurrent users)
+* **Before Optimization:** (New environment, unoptimized, 50 concurrent users)
+* **After Optimization:** (New environment, fully optimized, 50 concurrent users)
 
 ---
 
