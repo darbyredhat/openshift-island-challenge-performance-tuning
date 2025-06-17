@@ -29,8 +29,8 @@ Make sure you have the following installed on your macOS or Linux system.
       * The playbook executes `oc` commands locally. It must be installed and securely configured to connect to your target OpenShift cluster.  
       * **Configuration:** Ensure you are logged into the correct cluster and project (namespace):
         ```bash
-        oc login -u <your_username> --server=<your_api_server_url>
-        oc project <your-ctfd-namespace> # e.g., oc project ctfd
+        oc login -u admin --server=<your_openshift_api_url>
+        oc project ctfd # e.g., oc project ctfd
         ```
       * **Verify:** `oc whoami` and `oc project`
 
