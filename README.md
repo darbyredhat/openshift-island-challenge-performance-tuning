@@ -45,7 +45,14 @@ Assuming you have:
 
 ## **Step 2: Run Your Ansible Playbook:**
 
-Run the following command in your terminal:
+1. Clone this git repo
+
+```bash
+git clone https://github.com/darbyredhat/openshift-island-challenge-performance-tuning
+cd openshift-island-challenge-performance-tuning 
+```
+
+2. Run the following command in your terminal:
 
 ```bash
 ansible-playbook tune-openshift-island-challenge.yaml
