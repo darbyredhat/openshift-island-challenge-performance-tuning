@@ -1,0 +1,283 @@
+---
+- name: Optimize CTFd OpenShift Deployments (Scale Down/Up Strategy)
+  hosts: localhost # Run this playbook from your local machine where oc CLI is configured
+  connection: local # Use local connection as we're executing oc commands directly
+
+  # Variables for your OpenShift project and deployment names
+  vars:
+    namespace: ctfd
+    app_deployment_name: ctfd
+    db_deployment_name: ctfd-mysql-db
+    app_container_name: ctfd
+    db_container_name: ctfd-mysql-db
+    # Define desired replica count (currently 1 for both)
+    desired_replica_count: 1
+
+  pre_tasks:
+    - name: --- PRE-TASKS: SCALE DOWN DEPLOYMENTS FOR PATCHING ---
+      ansible.builtin.debug:
+        msg: "Scaling down deployments to 0 replicas. Application will experience downtime."
+
+    - name: Scale down {{ app_deployment_name }} to 0 replicas
+      community.kubernetes.k8s_scale:
+        name: "{{ app_deployment_name }}"
+        namespace: "{{ namespace }}"
+        replicas: 0
+        wait: true # Wait for pods to scale down to 0
+        wait_timeout: 300 # Max 5 minutes to scale down
+      register: app_scale_down_result
+      until: app_scale_down_result is succeeded # Retry on transient errors
+      retries: 5
+      delay: 5
+      
+    - name: Scale down {{ db_deployment_name }} to 0 replicas
+      community.kubernetes.k8s_scale:
+        name: "{{ db_deployment_name }}"
+        namespace: "{{ namespace }}"
+        replicas: 0
+        wait: true # Wait for pods to scale down to 0
+        wait_timeout: 300
+      register: db_scale_down_result
+      until: db_scale_down_result is succeeded
+      retries: 5
+      delay: 5
+
+    - name: Verify all pods are truly terminated after scale down
+      community.kubernetes.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ namespace }}"
+        field_selectors:
+          - status.phase!=Succeeded # Exclude already succeeded pods
+          - status.phase!=Failed    # Exclude already failed pods
+        label_selectors:
+          - app={{ app_deployment_name }} # Check pods belonging to the app deployment
+          - app={{ db_deployment_name }}  # Check pods belonging to the db deployment
+      register: remaining_pods
+      until: remaining_pods.resources | length == 0
+      retries: 10
+      delay: 10
+      loop_control:
+        label: "Waiting for all pods to be terminated."
+      when: remaining_pods.resources is defined and remaining_pods.resources | length > 0
+
+
+  tasks:
+    - name: --- PATCHING DEPLOYMENTS (WHILE SCALED DOWN) ---
+      ansible.builtin.debug:
+        msg: "Applying patches to deployments. No new pods will start until scale up."
+
+    - name: Generate SECRET_KEY
+      ansible.builtin.command: openssl rand -hex 32
+      register: secret_key_result
+      changed_when: false
+
+    - name: Set SECRET_KEY fact for use in subsequent patches
+      ansible.builtin.set_fact:
+        generated_secret_key: "{{ secret_key_result.stdout }}"
+
+    - name: Display generated SECRET_KEY (for debugging, remove in production)
+      ansible.builtin.debug:
+        msg: "Generated SECRET_KEY: {{ generated_secret_key }}"
+
+    - name: Apply Deployment Strategy for {{ app_deployment_name }} (maxSurge:0, maxUnavailable:1)
+      community.kubernetes.k8s_patch:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_deployment_name }}"
+        namespace: "{{ namespace }}"
+        type: strategic-merge
+        definition:
+          spec:
+            strategy:
+              type: RollingUpdate
+              rollingUpdate:
+                maxSurge: 0
+                maxUnavailable: 1
+      register: app_strategy_patch_result
+      until: app_strategy_patch_result is succeeded
+      retries: 5
+      delay: 5
+
+    - name: Apply Resource Limits and Requests for {{ app_deployment_name }}
+      community.kubernetes.k8s_patch:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_deployment_name }}"
+        namespace: "{{ namespace }}"
+        type: strategic-merge
+        definition:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: "{{ app_container_name }}"
+                    resources:
+                      limits:
+                        cpu: 4000m
+                        memory: 1Gi
+                      requests:
+                        cpu: 2000m
+                        memory: 512Mi
+      register: app_resources_patch_result
+      until: app_resources_patch_result is succeeded
+      retries: 5
+      delay: 5
+
+    - name: Update WORKERS Environment Variable for {{ app_deployment_name }} to 5
+      community.kubernetes.k8s_patch:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_deployment_name }}"
+        namespace: "{{ namespace }}"
+        type: strategic-merge
+        definition:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: "{{ app_container_name }}"
+                    env:
+                      - name: WORKERS
+                        value: "5"
+      register: app_workers_patch_result
+      until: app_workers_patch_result is succeeded
+      retries: 5
+      delay: 5
+
+    - name: Set SECRET_KEY Environment Variable for {{ app_deployment_name }}
+      community.kubernetes.k8s_patch:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_deployment_name }}"
+        namespace: "{{ namespace }}"
+        type: strategic-merge
+        definition:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: "{{ app_container_name }}"
+                    env:
+                      - name: SECRET_KEY
+                        value: "{{ generated_secret_key }}"
+      register: app_secret_key_patch_result
+      until: app_secret_key_patch_result is succeeded
+      retries: 5
+      delay: 5
+
+    - name: Set RATELIMIT_DEFAULT Environment Variable for {{ app_deployment_name }}
+      community.kubernetes.k8s_patch:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_deployment_name }}"
+        namespace: "{{ namespace }}"
+        type: strategic-merge
+        definition:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: "{{ app_container_name }}"
+                    env:
+                      - name: RATELIMIT_DEFAULT
+                        value: "1000 per 5 seconds"
+      register: app_ratelimit_patch_result
+      until: app_ratelimit_patch_result is succeeded
+      retries: 5
+      delay: 5
+
+    - name: Apply Deployment Strategy for {{ db_deployment_name }} (maxSurge:0, maxUnavailable:1)
+      community.kubernetes.k8s_patch:
+        api_version: apps/v1
+        kind: Deployment # << CHANGE TO 'StatefulSet' IF YOUR DB IS A STATEFULSET >>
+        name: "{{ db_deployment_name }}"
+        namespace: "{{ namespace }}"
+        type: strategic-merge
+        definition:
+          spec:
+            strategy:
+              type: RollingUpdate
+              rollingUpdate:
+                maxSurge: 0
+                maxUnavailable: 1
+      register: db_strategy_patch_result
+      until: db_strategy_patch_result is succeeded
+      retries: 5
+      delay: 5
+
+    - name: Apply Resource Limits and Requests for {{ db_deployment_name }}
+      community.kubernetes.k8s_patch:
+        api_version: apps/v1
+        kind: Deployment # << CHANGE TO 'StatefulSet' IF YOUR DB IS A STATEFULSET >>
+        name: "{{ db_deployment_name }}"
+        namespace: "{{ namespace }}"
+        type: strategic-merge
+        definition:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: "{{ db_container_name }}"
+                    resources:
+                      limits:
+                        cpu: 1000m
+                        memory: 2Gi
+                      requests:
+                        cpu: 500m
+                        memory: 1Gi
+      register: db_resources_patch_result
+      until: db_resources_patch_result is succeeded
+      retries: 5
+      delay: 5
+
+  post_tasks:
+    - name: --- POST-TASKS: SCALE UP DEPLOYMENTS ---
+      ansible.builtin.debug:
+        msg: "Scaling up deployments. Application will become available."
+
+    - name: Scale up {{ db_deployment_name }} to {{ desired_replica_count }} replicas
+      community.kubernetes.k8s_scale:
+        name: "{{ db_deployment_name }}"
+        namespace: "{{ namespace }}"
+        replicas: "{{ desired_replica_count }}"
+        wait: true # Wait for pods to scale up
+        wait_timeout: 300
+      register: db_scale_up_result
+      until: db_scale_up_result is succeeded
+      retries: 5
+      delay: 5
+
+    - name: Ensure {{ db_deployment_name }} is ready after scaling up
+      community.kubernetes.k8s_rollout:
+        name: "{{ db_deployment_name }}"
+        namespace: "{{ namespace }}"
+        wait_for_completion: true
+        state: complete
+
+    - name: Scale up {{ app_deployment_name }} to {{ desired_replica_count }} replicas
+      community.kubernetes.k8s_scale:
+        name: "{{ app_deployment_name }}"
+        namespace: "{{ namespace }}"
+        replicas: "{{ desired_replica_count }}"
+        wait: true
+        wait_timeout: 300
+      register: app_scale_up_result
+      until: app_scale_up_result is succeeded
+      retries: 5
+      delay: 5
+
+    - name: Ensure {{ app_deployment_name }} is ready after scaling up
+      community.kubernetes.k8s_rollout:
+        name: "{{ app_deployment_name }}"
+        namespace: "{{ namespace }}"
+        wait_for_completion: true
+        state: complete
+
+    - name: Playbook execution complete
+      ansible.builtin.debug:
+        msg: |
+          All CTFd deployment optimizations submitted.
+          Your CTFd application and database deployments are now configured.
+          Please wait for all rollouts to complete and then rerun your Playwright load test.
+          Remember to monitor both CTFd app and DB pod metrics during the next test run.
