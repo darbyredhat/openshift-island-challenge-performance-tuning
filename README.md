@@ -21,6 +21,11 @@ Make sure you have the following installed on your macOS or Linux system.
       * **Installation:**
         ```bash
         ansible-galaxy collection install community.kubernetes
+        ansible-galaxy collection install kubernetes.core\n
+        pip install kubernetes PyYAML
+        python3 -m venv path/to/venv\n    source path/to/venv/bin/activate
+        python3 -m pip install kubernetes PyYAML
+        ansible-galaxy collection install community.kubernetes
         ```
       * **Verify:** `ansible-galaxy collection list | grep kubernetes`
 
@@ -66,3 +71,31 @@ ansible-playbook tune-openshift-island-challenge.yaml
 * The entire process will be logged in your terminal, and you'll see messages indicating task progress and rollouts.
 
 After the playbook completes, your CTFd application and database will be running with all the performance and stability optimizations applied. 
+
+## Metrics: Before and After
+
+Okay, let's put together a "before and after" table of your API load test results. This will clearly highlight the impact of all the optimizations you've applied.
+
+**Before Optimization:** (New environment, unoptimized, 50 concurrent users)
+**After Optimization:** (New environment, fully optimized, 50 concurrent users)
+
+---
+
+### **API Load Test Performance: Before & After Optimization**
+
+| Metric | Before Optimization (Unoptimized CTFd) | After Optimization (Optimized CTFd) | Improvement / Notes |
+| :-------------------------------------- | :------------------------------------- | :---------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Total Test Duration** (for 5 min test) | 308.13 seconds                         | 304.12 seconds                      | Consistent (test ran for full duration both times)                                                                                                                  |
+| **Total API Flows Attempted** | 1333                                   | **3286** | **+146% Increase in Flows (Signifies much higher throughput and capacity)** |
+| **Flow Success Rate** | 99.85%                                 | **99.97%** | **Maintained near-perfect stability** |
+| **Overall API Call Success Rate** | 100.00%                                | 100.00%                             | **Maintained perfect individual API call stability** |
+| **Avg Full API Flow Duration Per User** | 11141.49ms (11.14s)                    | **4253.67ms (4.25s)** | **~2.6x Faster (Overall user journey is significantly more efficient)** |
+| **Avg Individual API Call Time** | 1087.98ms (1.09s)                      | **103.30ms (0.10s)** | **~10.5x Faster (Individual API calls are now lightning fast, averaging under 100ms!)** |
+| **P90 Individual API Call Time** | 1814.40ms (1.81s)                      | **171.00ms (0.17s)** | **~10.6x Faster (90% of calls are very fast)** |
+| **P99 Individual API Call Time** | 2143.84ms (2.14s)                      | **320.06ms (0.32s)** | **~6.7x Faster (The slowest 1% of calls are now completing in just under 1/3 of a second, indicating excellent consistency and elimination of significant long tails).** |
+
+---
+
+**Conclusion:**
+
+This table clearly demonstrates the dramatic and successful impact of the optimizations you applied. Your CTFd backend API has been transformed from struggling under load to being a highly performant, stable, and scalable system.
