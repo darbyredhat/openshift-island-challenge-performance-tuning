@@ -11,3 +11,31 @@ This document provides instructions for setting up and running API-focused load 
 * **Optimizes CTFd Database Resources:** Allocates more CPU and increases Memory limits for the MySQL database pod.
 * **Applies Safe Rollout Strategies:** Configures both deployments to update sequentially, avoiding multi-attach errors with persistent volumes.
 
+Okay, I will remove Node.js & npm, Ansible, and Python from the system requirements section. This leaves only the OpenShift CLI and the Kubernetes Ansible Collection as explicit installation steps.
+
+Here's the updated section:
+
+-----
+
+#### **Step 1: Install System Requirements (if not already installed)**
+
+Make sure you have the following installed on your macOS or Linux system.
+
+1.  **`community.kubernetes` Ansible Collection**:
+
+      * This collection provides the Ansible modules (`k8s_patch`, `k8s_rollout`, `k8s_scale`) that allow Ansible to interact with Kubernetes/OpenShift resources.
+      * **Installation:**
+        ```bash
+        ansible-galaxy collection install community.kubernetes
+        ```
+      * **Verify:** `ansible-galaxy collection list | grep kubernetes`
+
+2.  **OpenShift CLI (`oc`)**:
+
+      * The playbook executes `oc` commands locally. It must be installed and securely configured to connect to your target OpenShift cluster.  
+      * **Configuration:** Ensure you are logged into the correct cluster and project (namespace):
+        ```bash
+        oc login -u <your_username> --server=<your_api_server_url>
+        oc project <your-ctfd-namespace> # e.g., oc project ctfd
+        ```
+      * **Verify:** `oc whoami` and `oc project`
