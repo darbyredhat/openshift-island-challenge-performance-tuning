@@ -43,7 +43,7 @@ Assuming you have:
 * Your `tune-openshift-island-challenge.yaml` playbook file and `inventory.ini` file in the same directory.
 * You are currently in that directory in your terminal.
 
-## **Step 2: **Run Your Ansible Playbook:**
+## **Step 2: Run Your Ansible Playbook:**
 
 Run the following command in your terminal:
 
