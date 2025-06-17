@@ -2,7 +2,17 @@
 
 This document provides instructions for setting up and running API-focused load tests against your CTFd application using Playwright. This setup is optimized for high-performance API testing, bypassing full UI rendering for each request and using a pre-authenticated session.
 
-## **TL;DR: Playbook Overview**
+## The Problem
+
+Here's a high-level TL;DR of the problems faced in the **unoptimized deployment** of the CTFd application:
+
+* **Very Poor Performance:** API calls averaged over 1 second, and full user journeys took over 11 seconds, making the user experience unacceptable under load.
+* **Limited Concurrency:** Unable to handle target load efficiently due to low worker count (Gunicorn `WORKERS: 1`).
+* **Application CPU Bottleneck:** The CTFd app pod quickly saturated its available CPU resources under load.
+* **Unexpected Rate Limiting:** Encountered premature `429 Too Many Requests` errors, blocking proper load testing until bypassed.
+* **(Crucially: Database was not the issue):** Detailed analysis confirmed the MySQL database was healthy and not contributing to these bottlenecks.
+
+## **Playbook Overview**
 
 * **Ensures Safe Updates with Downtime:** Scales down both your CTFd application and database to zero replicas before applying any changes, then scales them back up.
 * **Generates Critical Security Key:** Automatically creates and sets a unique `SECRET_KEY` for your CTFd application.
