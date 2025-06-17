@@ -25,23 +25,9 @@ Here's a high-level TL;DR of the problems faced in the **unoptimized deployment*
 
 Make sure you have the following installed on your macOS or Linux system.
 
-1.  **`community.kubernetes` Ansible Collection**:
+1.  **OpenShift CLI (`oc`)**:
 
-      * This collection provides the Ansible modules (`k8s_patch`, `k8s_rollout`, `k8s_scale`) that allow Ansible to interact with Kubernetes/OpenShift resources.
-      * **Installation:**
-        ```bash
-        ansible-galaxy collection install community.kubernetes
-        ansible-galaxy collection install kubernetes.core\n
-        pip install kubernetes PyYAML
-        python3 -m venv path/to/venv\n    source path/to/venv/bin/activate
-        python3 -m pip install kubernetes PyYAML
-        ansible-galaxy collection install community.kubernetes
-        ```
-      * **Verify:** `ansible-galaxy collection list | grep kubernetes`
-
-2.  **OpenShift CLI (`oc`)**:
-
-      * The playbook executes `oc` commands locally. It must be installed and securely configured to connect to your target OpenShift cluster.  
+      * The script executes `oc` commands locally. It must be installed and securely configured to connect to your target OpenShift cluster.  
       * **Configuration:** Ensure you are logged in as `admin` to the correct cluster and project:
         ```bash
         oc login -u admin --server=<your_openshift_api_url>
@@ -49,16 +35,9 @@ Make sure you have the following installed on your macOS or Linux system.
         ```
       * **Verify:** `oc whoami` and `oc project`
 
-Okay, you're ready to run your Ansible playbook to apply the optimizations!
+Okay, you're ready to run your script to apply the optimizations!
 
-Assuming you have:
-* **Ansible** installed locally.
-* The **`community.kubernetes` collection** installed (`ansible-galaxy collection install community.kubernetes`).
-* The **`oc` CLI** installed and configured to connect to your remote OpenShift cluster, and you are logged into the correct project (`oc project <your-ctfd-namespace>`).
-* Your `tune-openshift-island-challenge.yaml` playbook file and `inventory.ini` file in the same directory.
-* You are currently in that directory in your terminal.
-
-## **Step 2: Run Your Ansible Playbook:**
+## **Step 2: Run the Tuning Script:**
 
 1. Clone this git repo
 
@@ -70,17 +49,17 @@ cd openshift-island-challenge-performance-tuning
 2. Run the following command in your terminal:
 
 ```bash
-ansible-playbook tune-openshift-island-challenge.yaml
+./tune-openshift-island-challenge.sh
 ```
 
 ### **What to Expect:**
 
-* The playbook will first **scale down** your CTFd application and database deployments to zero replicas. **This will cause downtime for your CTFd application.**
+* The script will first **scale down** your CTFd application and database deployments to zero replicas. **This will cause downtime for your CTFd application.**
 * It will then apply all the `oc patch` commands we've defined, updating the configurations for both your CTFd app and MySQL database.
 * Finally, it will **scale your database back up**, wait for it to be ready, and then **scale your CTFd application back up**.
 * The entire process will be logged in your terminal, and you'll see messages indicating task progress and rollouts.
 
-After the playbook completes, your CTFd application and database will be running with all the performance and stability optimizations applied. 
+After the script completes, your CTFd application and database will be running with all the performance and stability optimizations applied. 
 
 ## Metrics: Before and After
 
